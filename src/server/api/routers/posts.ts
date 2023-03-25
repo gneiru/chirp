@@ -32,7 +32,7 @@ export const postRouter = createTRPCRouter({
         limit: 100,
       })
     ).map(filterUserForClient);
-    console.log(user);
+    // console.log(user);
 
     return posts.map((post) => {
       const author = user.find((user) => user.id === post.authorId);
@@ -42,7 +42,7 @@ export const postRouter = createTRPCRouter({
           message: "Author for post not found",
         });
         
-        console.log(author.username)
+        // console.log(author.username)
         
       return {
         post,
