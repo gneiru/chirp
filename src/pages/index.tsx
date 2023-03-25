@@ -8,8 +8,10 @@ import { type RouterOutputs, api } from "~/utils/api";
 
 import dayjs from "dayjs";
 import relativetime from "dayjs/plugin/relativeTime";
-import { LoadingPage } from "~/components/loading";
+import { LoadingPage, LoadingSpinner } from "~/components/loading";
 import { useState } from "react";
+import toast from "react-hot-toast";
+import Link from "next/link";
 
 dayjs.extend(relativetime);
 
@@ -20,10 +22,20 @@ const CreatePostWizard = () => {
   const ctx = api.useContext();
 
   const { mutate, isLoading: isPosting } = api.post.create.useMutation({
-    onSuccess: () =>{
+    onSuccess: (e) => {
       setInput("");
       void ctx.post.getAll.invalidate();
-    }
+      const successMessage = `Successfully posted ${e.content}`;
+      toast.success(successMessage);
+    },
+    onError: (e) => {
+      const errorMessage = e.data?.zodError?.fieldErrors.content;
+      if (errorMessage && errorMessage[0]) {
+        toast.error(errorMessage[0]);
+      } else {
+        toast.error("Please try again later.");
+      }
+    },
   });
 
   if (!user) return null;
@@ -44,8 +56,23 @@ const CreatePostWizard = () => {
         value={input}
         onChange={(e) => setInput(e.target.value)}
         disabled={isPosting}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            if (input !== "") {
+              mutate({ content: input });
+            }
+          }
+        }}
       />
-      <button onClick={() => mutate({ content: input })}>Post</button>
+      {input !== "" && !isPosting && (
+        <button onClick={() => mutate({ content: input })}>Post</button>
+      )}
+      {isPosting && (
+        <div className="flex items-center justify-center">
+          <LoadingSpinner size={20} />
+        </div>
+      )}
     </div>
   );
 };
@@ -55,19 +82,24 @@ const PostView = (props: PostWithUser) => {
   const { post, author } = props;
   return (
     <div className="flex border-b p-4" key={post.id}>
-      <Image
-        src={author.profilePicture}
-        className="gap-4 rounded-full"
-        alt={author.username}
-        width={56}
-        height={56}
-      />
+      <Link href={`/@${author.username}`}>
+        <Image
+          src={author.profilePicture}
+          className="gap-4 rounded-full"
+          alt={author.username}
+          width={56}
+          height={56}
+        />
+      </Link>
       <div className="flex-col">
         <div className="flex gap-1 font-bold text-slate-200">
-          <span>{`@${author.username}`}</span>{" "}
+          <Link href={`/@${author.username}`}>
+            <span>{`@${author.username}`}</span>
+          </Link>{" "}
           <span className="font-thin">
-            {" "}
-            • {`${dayjs(post.createdAt).fromNow()}`}
+            <Link href={`/post/${post.id}`}>
+              • {`${dayjs(post.createdAt).fromNow()}`}
+            </Link>
           </span>
         </div>
         <div className="text-xl">{post.content}</div>
