@@ -7,6 +7,25 @@ import superjson from "superjson";
 import { createProxySSGHelpers } from "@trpc/react-query/ssg";
 import { PageLayout } from "~/components/layout";
 import Image from "next/image";
+import { LoadingPage } from "~/components/loading";
+import { PostView } from "~/components/postview";
+
+const ProfileFeed = (props: { userId: string }) => {
+  const { data, isLoading } = api.post.getPostsByUserId.useQuery({
+    userId: props.userId,
+  });
+
+  if (isLoading) return <LoadingPage />;
+  if (!data) return <div>Something went wrong!</div>;
+
+  return (
+    <div className="flex flex-col">
+      {data.map((fullPost) => (
+        <PostView {...fullPost} key={fullPost.post.id} />
+      ))}
+    </div>
+  );
+};
 
 const ProfilePage: NextPage<{ username: string }> = ({ username }) => {
   const { data } = api.profile.getUserByUsername.useQuery({
@@ -30,7 +49,8 @@ const ProfilePage: NextPage<{ username: string }> = ({ username }) => {
             className="rounded-full border-4 border-white dark:border-black"
           />
           <div className="p-4">@{data.username}</div>
-          <hr></hr>
+          <hr />
+          <ProfileFeed userId={data.id} />
         </div>
       </PageLayout>
     </>
