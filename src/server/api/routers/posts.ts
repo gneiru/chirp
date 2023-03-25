@@ -1,3 +1,4 @@
+import { privateProcedure } from "./../trpc";
 import type { User } from "@clerk/nextjs/dist/api";
 import { clerkClient } from "@clerk/nextjs/server";
 import { TRPCError } from "@trpc/server";
@@ -24,6 +25,9 @@ export const postRouter = createTRPCRouter({
   getAll: publicProcedure.query(async ({ ctx }) => {
     const posts = await ctx.prisma.post.findMany({
       take: 100,
+      orderBy: [
+        { createdAt: "desc"}
+      ]
     });
 
     const user = (
@@ -41,9 +45,9 @@ export const postRouter = createTRPCRouter({
           code: "INTERNAL_SERVER_ERROR",
           message: "Author for post not found",
         });
-        
-        // console.log(author.username)
-        
+
+      // console.log(author.username)
+
       return {
         post,
         author: {
@@ -53,4 +57,24 @@ export const postRouter = createTRPCRouter({
       };
     });
   }),
+
+  create: privateProcedure
+    .input(
+      z.object({
+        content: z.string().emoji().min(1).max(200),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const authorId = ctx.userId;
+
+      const post = await ctx.prisma.post.create({
+        data: {
+          authorId,
+          content: input.content,
+        },
+      });
+      console.log(post)
+
+      return post;
+    }),
 });

@@ -9,12 +9,22 @@ import { type RouterOutputs, api } from "~/utils/api";
 import dayjs from "dayjs";
 import relativetime from "dayjs/plugin/relativeTime";
 import { LoadingPage } from "~/components/loading";
+import { useState } from "react";
 
 dayjs.extend(relativetime);
 
 const CreatePostWizard = () => {
   const { user } = useUser();
   // console.log(user)
+  const [input, setInput] = useState<string>("");
+  const ctx = api.useContext();
+
+  const { mutate, isLoading: isPosting } = api.post.create.useMutation({
+    onSuccess: () =>{
+      setInput("");
+      void ctx.post.getAll.invalidate();
+    }
+  });
 
   if (!user) return null;
 
@@ -31,7 +41,11 @@ const CreatePostWizard = () => {
         type="text"
         placeholder="Type some texts"
         className="grow bg-transparent outline-none"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        disabled={isPosting}
       />
+      <button onClick={() => mutate({ content: input })}>Post</button>
     </div>
   );
 };
@@ -56,7 +70,7 @@ const PostView = (props: PostWithUser) => {
             • {`${dayjs(post.createdAt).fromNow()}`}
           </span>
         </div>
-        {post.content}
+        <div className="text-xl">{post.content}</div>
       </div>
     </div>
   );
@@ -65,11 +79,11 @@ const PostView = (props: PostWithUser) => {
 const Feed = () => {
   const { data, isLoading: postsLoading } = api.post.getAll.useQuery();
 
-  if(postsLoading) return <LoadingPage />
-  if(!data) return <div className="">Something Went Wrong</div>
+  if (postsLoading) return <LoadingPage />;
+  if (!data) return <div className="">Something Went Wrong</div>;
   return (
     <div className="flex flex-col">
-      {data?.map((fullPost) => (
+      {data.map((fullPost) => (
         <PostView {...fullPost} key={fullPost.post.id} />
       ))}
     </div>
@@ -80,7 +94,7 @@ const Home: NextPage = () => {
   const { isLoaded: userLoaded, isSignedIn } = useUser();
   api.post.getAll.useQuery();
 
-  if (!userLoaded) return <div/>
+  if (!userLoaded) return <div />;
 
   return (
     <>
